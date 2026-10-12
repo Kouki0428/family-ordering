@@ -55,20 +55,11 @@ export const menuApi = {
 
 // 订单相关
 export const orderApi = {
-  listByTable: (token: string) => api.get(`/api/orders/table/${token}`).then(r => r.data),
   listAll: () => api.get('/api/orders/all').then(r => r.data),
   get: (id: number) => api.get(`/api/orders/${id}`).then(r => r.data),
   create: (data: any) => api.post('/api/orders/', data).then(r => r.data),
   updateStatus: (id: number, status: string) =>
     api.put(`/api/orders/${id}/status`, { status }).then(r => r.data),
-}
-
-// 餐桌相关
-export const tableApi = {
-  list: () => api.get('/api/tables/').then(r => r.data),
-  getByToken: (token: string) => api.get(`/api/tables/by-token/${token}`).then(r => r.data),
-  create: (data: any) => api.post('/api/tables/', data).then(r => r.data),
-  delete: (id: number) => api.delete(`/api/tables/${id}`).then(r => r.data),
 }
 
 // 用户管理相关（管理员专用）

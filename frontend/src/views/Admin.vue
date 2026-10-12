@@ -40,33 +40,6 @@
             </el-table>
           </el-tab-pane>
 
-          <!-- 餐桌管理 -->
-          <el-tab-pane label="餐桌管理" name="tables">
-            <el-button type="primary" @click="openTableDialog()">+ 新增餐桌</el-button>
-            <el-table :data="tables" style="width: 100%; margin-top: 20px">
-              <el-table-column prop="id" label="ID" width="80" />
-              <el-table-column prop="name" label="名称" />
-              <el-table-column label="点餐链接" min-width="350">
-                <template #default="{ row }">
-                  <el-input
-                    :model-value="getOrderUrl(row.token)"
-                    readonly
-                    size="small"
-                  >
-                    <template #append>
-                      <el-button @click="copyUrl(row.token)">复制</el-button>
-                    </template>
-                  </el-input>
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="150">
-                <template #default="{ row }">
-                  <el-button size="small" type="danger" @click="deleteTable(row.id)">删除</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </el-tab-pane>
-
           <!-- 订单管理 -->
           <el-tab-pane label="订单管理" name="orders">
             <el-table :data="orders" style="width: 100%">
@@ -193,18 +166,6 @@
       </template>
     </el-dialog>
 
-    <!-- 餐桌编辑弹窗 -->
-    <el-dialog v-model="tableDialogVisible" title="新增餐桌">
-      <el-form :model="tableForm" label-width="80px">
-        <el-form-item label="餐桌名称">
-          <el-input v-model="tableForm.name" placeholder="如：1号桌" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="tableDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveTable">保存</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -212,17 +173,15 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { menuApi, tableApi, orderApi, authApi, usersApi } from '../api'
+import { menuApi, orderApi, authApi, usersApi } from '../api'
 
 const router = useRouter()
 const activeTab = ref('menus')
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
 const menus = ref<any[]>([])
-const tables = ref<any[]>([])
 const orders = ref<any[]>([])
 const users = ref<any[]>([])
 const menuDialogVisible = ref(false)
-const tableDialogVisible = ref(false)
 const editingMenu = ref<any>(null)
 const menuForm = ref({
   name: '',
@@ -232,21 +191,12 @@ const menuForm = ref({
   image_url: '',
   is_available: true,
 })
-const tableForm = ref({ name: '' })
 
 const loadMenus = async () => {
   try {
     menus.value = await menuApi.list()
   } catch (e) {
     ElMessage.error('加载菜单失败')
-  }
-}
-
-const loadTables = async () => {
-  try {
-    tables.value = await tableApi.list()
-  } catch (e) {
-    ElMessage.error('加载餐桌失败')
   }
 }
 
@@ -264,15 +214,6 @@ const loadUsers = async () => {
   } catch (e) {
     ElMessage.error('加载用户失败')
   }
-}
-
-const getOrderUrl = (token: string) => {
-  return `${window.location.origin}/order/${token}`
-}
-
-const copyUrl = (token: string) => {
-  navigator.clipboard.writeText(getOrderUrl(token))
-  ElMessage.success('链接已复制')
 }
 
 const openMenuDialog = (menu?: any) => {
@@ -314,33 +255,6 @@ const deleteMenu = async (id: number) => {
     await menuApi.delete(id)
     ElMessage.success('已删除')
     loadMenus()
-  } catch (e) {
-    ElMessage.error('删除失败')
-  }
-}
-
-const openTableDialog = () => {
-  tableForm.value = { name: '' }
-  tableDialogVisible.value = true
-}
-
-const saveTable = async () => {
-  try {
-    await tableApi.create(tableForm.value)
-    ElMessage.success('创建成功')
-    tableDialogVisible.value = false
-    loadTables()
-  } catch (e) {
-    ElMessage.error('创建失败')
-  }
-}
-
-const deleteTable = async (id: number) => {
-  await ElMessageBox.confirm('确定删除？', '提示')
-  try {
-    await tableApi.delete(id)
-    ElMessage.success('已删除')
-    loadTables()
   } catch (e) {
     ElMessage.error('删除失败')
   }
@@ -401,7 +315,6 @@ const logout = () => {
 
 onMounted(() => {
   loadMenus()
-  loadTables()
   loadOrders()
   loadUsers()
 })

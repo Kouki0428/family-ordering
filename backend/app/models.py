@@ -1,4 +1,4 @@
-"""数据模型：用户、餐桌、菜单、订单"""
+"""数据模型：用户、菜单、订单"""
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON, Boolean
 from sqlalchemy.orm import relationship
@@ -14,18 +14,6 @@ class User(Base):
     password = Column(String(128), nullable=False)  # bcrypt 加密
     is_admin = Column(Boolean, nullable=False, default=False)  # 是否管理员
     created_at = Column(DateTime, default=datetime.utcnow)
-
-
-class Table(Base):
-    """餐桌表"""
-    __tablename__ = "tables"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(50), unique=True, nullable=False)  # 餐桌名称（如"3号桌"）
-    token = Column(String(64), unique=True, nullable=False, index=True)  # 唯一标识
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    orders = relationship("Order", back_populates="table")
 
 
 class Menu(Base):
@@ -48,7 +36,6 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(Integer, primary_key=True, index=True)
-    table_id = Column(Integer, ForeignKey("tables.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 下单用户
     status = Column(String(20), nullable=False, default="预订")  # 预订/待确认
     items = Column(JSON, nullable=False)  # 点餐项列表 [{menu_id, name, quantity}]
@@ -56,5 +43,4 @@ class Order(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    table = relationship("Table", back_populates="orders")
     user = relationship("User")

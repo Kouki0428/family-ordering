@@ -2,7 +2,7 @@
   <div class="order-page">
     <div class="header">
       <div class="header-left">
-        <h1>{{ tableName }} · 点餐</h1>
+        <h1>🏠 家庭点餐</h1>
         <span class="mode-tag" :class="currentMode">
           {{ currentMode === 'cook' ? '👨‍🍳 做餐模式' : '🍽️ 订餐模式' }}
         </span>
@@ -111,23 +111,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { menuApi, tableApi, orderApi, authApi } from '../api'
+import { menuApi, orderApi } from '../api'
 
-const route = useRoute()
 const router = useRouter()
-const tableToken = ref(route.params.token as string || '')
-const tableName = ref('未知餐桌')
 const menus = ref<any[]>([])
 const cart = ref<any[]>([])
 const note = ref('')
 const cartVisible = ref(false)
 const selectedMealType = ref('早餐')
 const pendingOrders = ref<any[]>([])
-const currentMode = ref<'order' | 'cook'>('order')  // 当前模式：订餐或做餐
-const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
+const currentMode = ref<'order' | 'cook'>('order')
 const defaultImage = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150"><rect fill="%23e0e0e0" width="200" height="150"/><text x="100" y="80" font-size="14" fill="%23999" text-anchor="middle">暂无图片</text></svg>'
 
 const loadMenus = async () => {
@@ -135,17 +131,6 @@ const loadMenus = async () => {
     menus.value = await menuApi.list(selectedMealType.value)
   } catch (e) {
     ElMessage.error('加载菜单失败')
-  }
-}
-
-const loadTable = async () => {
-  if (tableToken.value) {
-    try {
-      const table = await tableApi.getByToken(tableToken.value)
-      tableName.value = table.name
-    } catch (e) {
-      ElMessage.error('餐桌不存在')
-    }
   }
 }
 
@@ -181,7 +166,6 @@ const submitOrder = async () => {
   if (cart.value.length === 0) return
   try {
     await orderApi.create({
-      table_token: tableToken.value,
       items: cart.value,
       note: note.value,
     })
@@ -226,17 +210,9 @@ const logout = () => {
   router.push('/login')
 }
 
-// 监听路由参数变化
-watch(() => route.params.token, (newToken) => {
-  tableToken.value = newToken as string || ''
-  loadTable()
-})
-
 onMounted(() => {
-  // 所有用户都可以切换做餐模式
   currentMode.value = 'order'
   loadMenus()
-  loadTable()
 })
 
 // 定期刷新待确认订单（做餐模式）
