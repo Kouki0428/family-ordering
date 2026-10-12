@@ -5,6 +5,8 @@ from pydantic import BaseModel
 from typing import List
 from app.database import get_db
 from app.models import Order, User
+from app.websocket import manager
+import asyncio
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
@@ -24,6 +26,38 @@ class OrderStatusUpdate(BaseModel):
     status: str  # 预订/待确认
 
 
+async def broadcast_order_created(order: Order):
+    """广播新订单创建消息"""
+    await manager.broadcast({
+        "type": "order_created",
+        "data": {
+            "order": {
+                "id": order.id,
+                "status": order.status,
+                "items": order.items,
+                "note": order.note,
+                "created_at": order.created_at.isoformat() if order.created_at else None,
+            }
+        }
+    })
+
+
+async def broadcast_order_status_changed(order: Order):
+    """广播订单状态变更消息"""
+    await manager.broadcast({
+        "type": "order_status_changed",
+        "data": {
+            "order": {
+                "id": order.id,
+                "status": order.status,
+                "items": order.items,
+                "note": order.note,
+                "updated_at": order.updated_at.isoformat() if order.updated_at else None,
+            }
+        }
+    })
+
+
 @router.get("/all", response_model=List[Order])
 def list_all_orders(db: Session = Depends(get_db)):
     """获取所有订单（管理后台用）"""
@@ -40,7 +74,7 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=Order)
-def create_order(order: OrderCreate, db: Session = Depends(get_db)):
+async def create_order(order: OrderCreate, db: Session = Depends(get_db)):
     """创建新订单"""
     # 存储点餐项（转换为字典列表）
     items_data = [
@@ -57,12 +91,14 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_order)
 
-    # TODO: 触发 WebSocket 推送通知
+    # 触发 WebSocket 推送通知
+    await broadcast_order_created(db_order)
+
     return db_order
 
 
 @router.put("/{order_id}/status", response_model=Order)
-def update_order_status(order_id: int, update: OrderStatusUpdate, db: Session = Depends(get_db)):
+async def update_order_status(order_id: int, update: OrderStatusUpdate, db: Session = Depends(get_db)):
     """更新订单状态"""
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
@@ -76,5 +112,7 @@ def update_order_status(order_id: int, update: OrderStatusUpdate, db: Session = 
     db.commit()
     db.refresh(order)
 
-    # TODO: 触发 WebSocket 推送通知
+    # 触发 WebSocket 推送通知
+    await broadcast_order_status_changed(order)
+
     return order

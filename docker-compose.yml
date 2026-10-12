@@ -7,7 +7,7 @@ services:
     container_name: ordering-api
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8889:8000"
     volumes:
       # 数据持久化到 NAS 共享文件夹
       - ./data:/data
@@ -23,7 +23,7 @@ services:
     container_name: ordering-web
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "8888:80"
     depends_on:
       - ordering-api
     networks:

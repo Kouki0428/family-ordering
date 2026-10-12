@@ -45,10 +45,10 @@ docker-compose ps
 
 | 功能 | 地址 |
 |---|---|
-| 登录页 | `http://NAS_IP:8080/login` |
-| 管理后台 | `http://NAS_IP:8080/admin` |
-| 后厨大屏 | `http://NAS_IP:8080/kitchen` |
-| API 文档 | `http://NAS_IP:8000/docs` |
+| 登录页 | `http://NAS_IP:8888/login` |
+| 管理后台 | `http://NAS_IP:8888/admin` |
+| 后厨大屏 | `http://NAS_IP:8888/kitchen` |
+| API 文档 | `http://NAS_IP:8889/docs` |
 
 ## 首次使用
 

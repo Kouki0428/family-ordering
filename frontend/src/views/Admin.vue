@@ -5,6 +5,12 @@
         <div class="header-content">
           <h1>家庭点餐 · 管理后台</h1>
           <div class="user-info">
+            <el-tag v-if="wsConnected" type="success" size="small">
+              <span class="pulse-dot">●</span> 实时连接
+            </el-tag>
+            <el-tag v-else type="danger" size="small">
+              <span class="pulse-dot">○</span> 已断开
+            </el-tag>
             <span>👤 {{ user?.username }}</span>
             <el-button size="small" @click="logout">退出</el-button>
           </div>
@@ -170,12 +176,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { menuApi, orderApi, authApi, usersApi } from '../api'
+import { useWebSocket, showNotification } from '../composables/useWebSocket'
 
 const router = useRouter()
+const { wsConnected, onMessage } = useWebSocket()
 const activeTab = ref('menus')
 const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
 const menus = ref<any[]>([])
@@ -313,10 +321,34 @@ const logout = () => {
   router.push('/login')
 }
 
+let removeCallback: (() => void) | null = null
 onMounted(() => {
   loadMenus()
   loadOrders()
   loadUsers()
+  
+  // 注册 WebSocket 消息回调
+  removeCallback = onMessage((data) => {
+    if (data.type === 'order_created' || data.type === 'order_status_changed') {
+      // 自动刷新订单列表
+      loadOrders()
+      
+      // 显示通知
+      if (data.type === 'order_created') {
+        showNotification(
+          '新订单',
+          `订单 #${data.data?.order?.id} 已提交`,
+          'warning'
+        )
+      }
+    }
+  })
+})
+
+onUnmounted(() => {
+  if (removeCallback) {
+    removeCallback()
+  }
 })
 </script>
 
@@ -345,5 +377,15 @@ onMounted(() => {
   background: #f5f5f5;
   border-radius: 4px;
   margin-bottom: 10px;
+}
+
+.pulse-dot {
+  display: inline-block;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 </style>

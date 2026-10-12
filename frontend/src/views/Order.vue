@@ -6,6 +6,12 @@
         <span class="mode-tag" :class="currentMode">
           {{ currentMode === 'cook' ? '👨‍🍳 做餐模式' : '🍽️ 订餐模式' }}
         </span>
+        <el-tag v-if="wsConnected" type="success" size="small">
+          <span class="pulse-dot">●</span> 实时连接
+        </el-tag>
+        <el-tag v-else type="danger" size="small">
+          <span class="pulse-dot">○</span> 已断开
+        </el-tag>
       </div>
       <div class="header-right">
         <el-button 
@@ -111,12 +117,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { menuApi, orderApi } from '../api'
+import { useWebSocket, showNotification } from '../composables/useWebSocket'
 
 const router = useRouter()
+const { wsConnected, onMessage } = useWebSocket()
+
 const menus = ref<any[]>([])
 const cart = ref<any[]>([])
 const note = ref('')
@@ -210,12 +219,45 @@ const logout = () => {
   router.push('/login')
 }
 
+// 监听 WebSocket 消息
+let removeCallback: (() => void) | null = null
 onMounted(() => {
   currentMode.value = 'order'
   loadMenus()
+  
+  // 注册 WebSocket 消息回调
+  removeCallback = onMessage((data) => {
+    if (data.type === 'order_created' || data.type === 'order_status_changed') {
+      // 做餐模式下自动刷新待确认订单
+      if (currentMode.value === 'cook') {
+        loadPendingOrders()
+      }
+      
+      // 显示通知
+      if (data.type === 'order_created') {
+        showNotification(
+          '新订单',
+          `订单 #${data.data?.order?.id} 已提交，等待确认`,
+          'warning'
+        )
+      } else if (data.type === 'order_status_changed') {
+        showNotification(
+          '订单更新',
+          `订单 #${data.data?.order?.id} 状态已更新`,
+          'success'
+        )
+      }
+    }
+  })
 })
 
-// 定期刷新待确认订单（做餐模式）
+onUnmounted(() => {
+  if (removeCallback) {
+    removeCallback()
+  }
+})
+
+// 定期刷新待确认订单（做餐模式，每 30 秒）
 setInterval(() => {
   if (currentMode.value === 'cook') {
     loadPendingOrders()
@@ -267,6 +309,16 @@ setInterval(() => {
 .mode-tag.order {
   background: #409eff;
   color: white;
+}
+
+.pulse-dot {
+  display: inline-block;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .cook-section {

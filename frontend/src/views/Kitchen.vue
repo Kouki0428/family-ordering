@@ -4,7 +4,8 @@
       <h1>🍳 后厨订单大屏</h1>
       <div class="connection-status">
         <el-tag :type="wsConnected ? 'success' : 'danger'" size="small">
-          {{ wsConnected ? '● 已连接' : '○ 已断开' }}
+          <span class="pulse-dot">{{ wsConnected ? '●' : '○' }}</span>
+          {{ wsConnected ? '已连接' : '已断开' }}
         </el-tag>
         <el-tag size="small" type="warning">预订: {{ pendingCount }}</el-tag>
         <el-tag size="small" type="primary">待确认: {{ confirmedCount }}</el-tag>
@@ -22,7 +23,7 @@
       >
         <div class="order-header">
           <span class="order-id">#{{ order.id }}</span>
-          <el-tag :type="order.status === '预订' ? 'warning' : 'primary'" size="small">
+          <el-tag :type="order.status === '预订' ? 'success' : 'warning'" size="small">
             {{ order.status }}
           </el-tag>
         </div>
@@ -37,20 +38,20 @@
         </div>
         <div class="order-actions">
           <el-button
-            v-if="order.status === '预订'"
+            v-if="order.status === '待确认'"
             type="primary"
             size="small"
-            @click="updateStatus(order.id, '待确认')"
+            @click="updateStatus(order.id, '预订')"
           >
             确认订单
           </el-button>
           <el-button
-            v-if="order.status === '待确认'"
+            v-if="order.status === '预订'"
             type="info"
             size="small"
-            @click="updateStatus(order.id, '预订')"
+            @click="updateStatus(order.id, '待确认')"
           >
-            退回预订
+            退回
           </el-button>
         </div>
       </el-card>
@@ -65,12 +66,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { orderApi, createWebSocket } from '../api'
+import { orderApi } from '../api'
+import { useWebSocket, showNotification } from '../composables/useWebSocket'
+
+const { wsConnected, onMessage } = useWebSocket()
 
 const orders = ref<any[]>([])
-const wsConnected = ref(false)
-let ws: WebSocket | null = null
-let reconnectTimer: any = null
+let removeCallback: (() => void) | null = null
 
 const activeOrders = computed(() => {
   return orders.value.filter(o => o.status === '预订' || o.status === '待确认')
@@ -88,33 +90,6 @@ const loadOrders = async () => {
   }
 }
 
-const connectWebSocket = () => {
-  ws = createWebSocket()
-
-  ws.onopen = () => {
-    wsConnected.value = true
-    console.log('WebSocket 已连接')
-  }
-
-  ws.onmessage = (event) => {
-    const data = JSON.parse(event.data)
-    console.log('收到推送:', data)
-    if (data.type === 'order_created' || data.type === 'order_status_changed') {
-      loadOrders()
-    }
-  }
-
-  ws.onclose = () => {
-    wsConnected.value = false
-    console.log('WebSocket 已断开，尝试重连...')
-    reconnectTimer = setTimeout(connectWebSocket, 3000)
-  }
-
-  ws.onerror = (error) => {
-    console.error('WebSocket 错误:', error)
-  }
-}
-
 const updateStatus = async (orderId: number, status: string) => {
   try {
     await orderApi.updateStatus(orderId, status)
@@ -125,28 +100,34 @@ const updateStatus = async (orderId: number, status: string) => {
   }
 }
 
-// 定期心跳检测
-let heartbeatTimer: any = null
-const startHeartbeat = () => {
-  heartbeatTimer = setInterval(() => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send('ping')
-    }
-  }, 25000)
-}
-
 onMounted(() => {
   loadOrders()
-  connectWebSocket()
-  startHeartbeat()
-  // 定期刷新订单（防止 WebSocket 断开期间丢失数据）
+  
+  // 注册 WebSocket 消息回调
+  removeCallback = onMessage((data) => {
+    if (data.type === 'order_created' || data.type === 'order_status_changed') {
+      // 自动刷新订单
+      loadOrders()
+      
+      // 显示通知
+      if (data.type === 'order_created') {
+        showNotification(
+          '新订单',
+          `订单 #${data.data?.order?.id} 已提交`,
+          'warning'
+        )
+      }
+    }
+  })
+  
+  // 定期刷新（兜底）
   setInterval(loadOrders, 30000)
 })
 
 onUnmounted(() => {
-  if (ws) ws.close()
-  if (reconnectTimer) clearTimeout(reconnectTimer)
-  if (heartbeatTimer) clearInterval(heartbeatTimer)
+  if (removeCallback) {
+    removeCallback()
+  }
 })
 </script>
 
@@ -195,11 +176,11 @@ onUnmounted(() => {
 }
 
 .order-card.status-预订 {
-  border-color: #e6a23c;
+  border-color: #67c23a;
 }
 
 .order-card.status-待确认 {
-  border-color: #409eff;
+  border-color: #e6a23c;
 }
 
 .order-header {
@@ -256,5 +237,15 @@ onUnmounted(() => {
 
 .empty-state p {
   font-size: 24px;
+}
+
+.pulse-dot {
+  display: inline-block;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 </style>
