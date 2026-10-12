@@ -16,13 +16,11 @@ class UserResponse(BaseModel):
     id: int
     username: str
     is_admin: bool
-    is_cooker: bool
     created_at: str
 
 
 class UserUpdate(BaseModel):
     is_admin: Optional[bool] = None
-    is_cooker: Optional[bool] = None
 
 
 def get_current_admin(token: str, db: Session = Depends(get_db)) -> User:
@@ -58,7 +56,6 @@ def list_users(
             "id": u.id,
             "username": u.username,
             "is_admin": u.is_admin,
-            "is_cooker": u.is_cooker,
             "created_at": u.created_at.isoformat() if u.created_at else None,
         }
         for u in users
@@ -84,8 +81,6 @@ def update_user(
     
     if update.is_admin is not None:
         user.is_admin = update.is_admin
-    if update.is_cooker is not None:
-        user.is_cooker = update.is_cooker
     
     db.commit()
     db.refresh(user)
@@ -94,7 +89,6 @@ def update_user(
         "id": user.id,
         "username": user.username,
         "is_admin": user.is_admin,
-        "is_cooker": user.is_cooker,
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
 

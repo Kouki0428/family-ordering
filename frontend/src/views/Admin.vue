@@ -122,11 +122,10 @@
             <el-table :data="users" style="width: 100%">
               <el-table-column prop="id" label="ID" width="80" />
               <el-table-column prop="username" label="用户名" />
-              <el-table-column label="权限" width="250">
+              <el-table-column label="角色" width="150">
                 <template #default="{ row }">
                   <el-tag v-if="row.is_admin" type="danger">管理员</el-tag>
-                  <el-tag v-if="row.is_cooker" type="success" style="margin-left: 5px">做餐者</el-tag>
-                  <el-tag v-if="!row.is_admin && !row.is_cooker" type="info">普通用户</el-tag>
+                  <el-tag v-else type="info">普通用户</el-tag>
                 </template>
               </el-table-column>
               <el-table-column label="操作" width="300">
@@ -137,13 +136,6 @@
                     style="margin-right: 15px"
                   >
                     管理员
-                  </el-checkbox>
-                  <el-checkbox 
-                    v-model="row.is_cooker" 
-                    @change="updateUserRole(row.id, 'is_cooker', row.is_cooker)"
-                    style="margin-right: 15px"
-                  >
-                    做餐者
                   </el-checkbox>
                   <el-button 
                     type="danger" 

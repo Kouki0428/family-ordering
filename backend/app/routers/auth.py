@@ -16,7 +16,6 @@ class UserCreate(BaseModel):
     username: str
     password: str
     is_admin: bool = False
-    is_cooker: bool = False
 
 
 class Token(BaseModel):
@@ -47,7 +46,6 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         username=user.username,
         password=hash_password(user.password),
         is_admin=user.is_admin,
-        is_cooker=user.is_cooker,
     )
     db.add(db_user)
     db.commit()
@@ -67,7 +65,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         )
     
     # 生成简单 token（生产环境建议使用 JWT）
-    token = f"{user.id}:{user.username}:{user.is_admin}:{user.is_cooker}"
+    token = f"{user.id}:{user.username}:{user.is_admin}"
     return Token(access_token=token, token_type="bearer")
 
 
@@ -76,12 +74,11 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     """获取当前用户信息"""
     try:
         parts = token.split(":")
-        if len(parts) != 4:
+        if len(parts) != 3:
             raise ValueError("Invalid token")
         user_id = int(parts[0])
         username = parts[1]
         is_admin = parts[2] == "True"
-        is_cooker = parts[3] == "True"
         
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
@@ -91,7 +88,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             "id": user.id,
             "username": user.username,
             "is_admin": user.is_admin,
-            "is_cooker": user.is_cooker,
         }
     except Exception:
         raise HTTPException(status_code=401, detail="无效的认证令牌")

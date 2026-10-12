@@ -62,11 +62,6 @@
                 设为管理员（首次注册建议勾选）
               </el-checkbox>
             </el-form-item>
-            <el-form-item>
-              <el-checkbox v-model="registerForm.is_cooker">
-                设为做餐者（可以确认订单）
-              </el-checkbox>
-            </el-form-item>
             <el-button 
               type="primary" 
               size="large" 
@@ -102,7 +97,6 @@ const registerForm = ref({
   username: '',
   password: '',
   is_admin: false,
-  is_cooker: false,
 })
 
 const handleLogin = async () => {

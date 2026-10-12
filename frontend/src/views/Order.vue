@@ -9,7 +9,6 @@
       </div>
       <div class="header-right">
         <el-button 
-          v-if="user?.is_cooker || user?.is_admin"
           :type="currentMode === 'cook' ? 'success' : 'default'"
           @click="toggleMode"
         >
@@ -234,11 +233,8 @@ watch(() => route.params.token, (newToken) => {
 })
 
 onMounted(() => {
-  // 检查用户是否有做餐权限
-  if (user.value.is_cooker || user.value.is_admin) {
-    // 默认进入订餐模式，但可以切换
-    currentMode.value = 'order'
-  }
+  // 所有用户都可以切换做餐模式
+  currentMode.value = 'order'
   loadMenus()
   loadTable()
 })
