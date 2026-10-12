@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # 后端 API 服务
+  ordering-api:
+    build: ./backend
+    container_name: ordering-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # 数据持久化到 NAS 共享文件夹
+      - ./data:/data
+    environment:
+      - DB_PATH=/data/ordering.db
+      - CORS_ORIGINS=*
+    networks:
+      - ordering-net
+
+  # 前端 Web 服务（Nginx）
+  ordering-web:
+    build: ./frontend
+    container_name: ordering-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - ordering-api
+    networks:
+      - ordering-net
+
+networks:
+  ordering-net:
+    driver: bridge
