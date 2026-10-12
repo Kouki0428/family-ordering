@@ -6,7 +6,7 @@ import os
 
 from app.database import init_db
 from app.websocket import manager
-from app.routers import menus, orders, tables, auth
+from app.routers import menus, orders, tables, auth, users
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -26,6 +26,7 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(auth.router)
+app.include_router(users.router)
 app.include_router(menus.router)
 app.include_router(orders.router)
 app.include_router(tables.router)

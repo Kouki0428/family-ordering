@@ -13,6 +13,7 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False, index=True)
     password = Column(String(128), nullable=False)  # bcrypt 加密
     is_admin = Column(Boolean, nullable=False, default=False)  # 是否管理员
+    is_cooker = Column(Boolean, nullable=False, default=False)  # 是否做餐者（可以确认订单）
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

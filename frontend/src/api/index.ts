@@ -71,6 +71,13 @@ export const tableApi = {
   delete: (id: number) => api.delete(`/api/tables/${id}`).then(r => r.data),
 }
 
+// 用户管理相关（管理员专用）
+export const usersApi = {
+  list: () => api.get('/api/users/').then(r => r.data),
+  update: (id: number, data: any) => api.put(`/api/users/${id}`, data).then(r => r.data),
+  delete: (id: number) => api.delete(`/api/users/${id}`).then(r => r.data),
+}
+
 // WebSocket 连接
 export function createWebSocket(): WebSocket {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'

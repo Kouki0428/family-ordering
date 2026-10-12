@@ -119,8 +119,43 @@
 
           <!-- 用户管理 -->
           <el-tab-pane label="用户管理" name="users" v-if="user?.is_admin">
-            <p class="tip">💡 新用户首次访问系统时可自行注册</p>
-            <p class="tip">⚠️ 管理员账号创建后请在数据库中手动设置 is_admin=True</p>
+            <el-table :data="users" style="width: 100%">
+              <el-table-column prop="id" label="ID" width="80" />
+              <el-table-column prop="username" label="用户名" />
+              <el-table-column label="权限" width="250">
+                <template #default="{ row }">
+                  <el-tag v-if="row.is_admin" type="danger">管理员</el-tag>
+                  <el-tag v-if="row.is_cooker" type="success" style="margin-left: 5px">做餐者</el-tag>
+                  <el-tag v-if="!row.is_admin && !row.is_cooker" type="info">普通用户</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="300">
+                <template #default="{ row }">
+                  <el-checkbox 
+                    v-model="row.is_admin" 
+                    @change="updateUserRole(row.id, 'is_admin', row.is_admin)"
+                    style="margin-right: 15px"
+                  >
+                    管理员
+                  </el-checkbox>
+                  <el-checkbox 
+                    v-model="row.is_cooker" 
+                    @change="updateUserRole(row.id, 'is_cooker', row.is_cooker)"
+                    style="margin-right: 15px"
+                  >
+                    做餐者
+                  </el-checkbox>
+                  <el-button 
+                    type="danger" 
+                    size="small" 
+                    @click="deleteUser(row.id)"
+                    :disabled="row.id === user.id"
+                  >
+                    删除
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
           </el-tab-pane>
         </el-tabs>
       </el-main>
@@ -185,7 +220,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { menuApi, tableApi, orderApi, authApi } from '../api'
+import { menuApi, tableApi, orderApi, authApi, usersApi } from '../api'
 
 const router = useRouter()
 const activeTab = ref('menus')
@@ -193,6 +228,7 @@ const user = ref(JSON.parse(localStorage.getItem('user') || '{}'))
 const menus = ref<any[]>([])
 const tables = ref<any[]>([])
 const orders = ref<any[]>([])
+const users = ref<any[]>([])
 const menuDialogVisible = ref(false)
 const tableDialogVisible = ref(false)
 const editingMenu = ref<any>(null)
@@ -227,6 +263,14 @@ const loadOrders = async () => {
     orders.value = await orderApi.listAll()
   } catch (e) {
     ElMessage.error('加载订单失败')
+  }
+}
+
+const loadUsers = async () => {
+  try {
+    users.value = await usersApi.list()
+  } catch (e) {
+    ElMessage.error('加载用户失败')
   }
 }
 
@@ -334,6 +378,29 @@ const formatDate = (date: string) => {
   return new Date(date).toLocaleString('zh-CN')
 }
 
+const updateUserRole = async (userId: number, role: 'is_admin' | 'is_cooker', value: boolean) => {
+  try {
+    await usersApi.update(userId, { [role]: value })
+    ElMessage.success('权限已更新')
+    loadUsers()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.detail || '更新失败')
+    // 回滚
+    loadUsers()
+  }
+}
+
+const deleteUser = async (id: number) => {
+  await ElMessageBox.confirm('确定删除该用户？', '提示')
+  try {
+    await usersApi.delete(id)
+    ElMessage.success('已删除')
+    loadUsers()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.detail || '删除失败')
+  }
+}
+
 const logout = () => {
   localStorage.removeItem('token')
   localStorage.removeItem('user')
@@ -344,6 +411,7 @@ onMounted(() => {
   loadMenus()
   loadTables()
   loadOrders()
+  loadUsers()
 })
 </script>
 
